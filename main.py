@@ -1,3 +1,5 @@
+"""Cloud Checker by Cloudzik1337 DC: byid"""
+
 import itertools
 import string
 import queue
@@ -22,16 +24,12 @@ class Config:
         self.load_config()
 
     def load_config(self):
-        file_path = Path("data/config.json")
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        if not file_path.exists():
-            file_path.touch(exist_ok=True)
         with open('data/config.json', 'a') as f:
-            # rest of your code
             if os.path.getsize("data/config.json") == 0:
                 f.write("{}")
                 f.close()
         
+
     def get(self, key):
         with open('data/config.json', 'r') as f:
             self.config = json.load(f)
@@ -59,85 +57,11 @@ class Config:
 @staticmethod
 def handler(signal_received, frame):
     # Handle any cleanup here
-    print("\nSIGINT or CTRL-C detected. Exiting gracefully")
-    sys.exit(0)
+    print('\nSIGINT or CTRL-C detected. Exiting gracefully')
+    exit(0)
 
 signal(SIGINT, handler)
 
-class Worker(threading.Thread):
-    def __init__(self, queue, log_file, line_number, total_requests, lock):
-        threading.Thread.__init__(self)
-        self.queue = queue
-        self.log_file = log_file
-        self.line_number = line_number
-        self.total_requests = total_requests
-        self.lock = lock
-
-    def run(self):
-        while True:
-            item = self.queue.get()
-            if item is None:
-                break
-            
-            # Process the item
-            try:
-                self.process_item(item)
-            except Exception as e:
-                with self.lock:
-                    with open(self.log_file, 'a') as f:
-                        f.write(f"{self.line_number[0]}: Error processing item {item}: {e}\n")
-            finally:
-                self.queue.task_done()
-            
-            with self.lock:
-                self.line_number[0] += 1
-                self.total_requests[0] += 1
-
-    def process_item(self, item):
-        # Simulate request processing
-        sleep(random.uniform(0.1, 0.5))  # Simulate variable processing time
-        response = requests.get(item)
-        with self.lock:
-            with open(self.log_file, 'a') as f:
-                f.write(f"{self.line_number[0]}: Processed {item} with status code {response.status_code}. Total requests: {self.total_requests[0]}\n")
-
-def main():
-    config = Config()
-    q = queue.Queue()
-    log_file = "log.txt"
-    line_number = [1]  # Use list to make it mutable and shared among threads
-    total_requests = [0]  # Use list to make it mutable and shared among threads
-    lock = threading.Lock()
-
-    # Create worker threads
-    num_worker_threads = 5
-    workers = []
-    for _ in range(num_worker_threads):
-        worker = Worker(q, log_file, line_number, total_requests, lock)
-        worker.setDaemon(True)
-        worker.start()
-        workers.append(worker)
-
-    # Enqueue items
-    items = ["http://example.com"] * 10  # Replace with actual items
-    for item in items:
-        q.put(item)
-
-    # Block until all tasks are done
-    q.join()
-
-    # Stop workers
-    for _ in range(num_worker_threads):
-        q.put(None)
-    for worker in workers:
-        worker.join()
-
-    # Log total requests
-    with open(log_file, 'a') as f:
-        f.write(f"Total requests processed: {total_requests[0]}\n")
-
-if __name__ == "__main__":
-    main()
 
 
 
@@ -148,31 +72,38 @@ confirmators =  ["y", "yes", "1", "true", "t"]
 negators =      ["n", "no", "0", "false", "f"]
 
 os.makedirs("logs", exist_ok=True)
-os.makedirs("results", exist_ok=True)
+os.makedirs("results", exist_ok=True)  
 os.makedirs("data", exist_ok=True)
 
 
 def create_empty_file(file_path):
     file_path = Path(file_path)
+    
     if not file_path.exists():
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.touch(exist_ok=True)
-
+        with file_path.open("w", encoding='utf-8'):
+            pass
 
 def clear_file(file_path):
     file_path = Path(file_path)
+    
     if file_path.exists():
-        with file_path.open("w", encoding="utf-8"):
+        with file_path.open("w", encoding='utf-8'):
             pass
 
 
 create_empty_file("logs/log.txt")
-create_empty_file("results/hits.txt")
-create_empty_file("data/names_to_check.txt")
-create_empty_file("logs/error.txt")
-create_empty_file("data/proxies.txt")
 clear_file("logs/log.txt")
+
+
+create_empty_file("results/hits.txt")
+
+create_empty_file("data/names_to_check.txt")
+
+create_empty_file("logs/error.txt")
 clear_file("logs/error.txt")
+
+create_empty_file("data/proxies.txt")
 
 with Path("data/proxies.txt").open("r", encoding='utf-8') as proxies_file:
     proxies = proxies_file.read().splitlines()
@@ -196,7 +127,6 @@ proxy_cycle = itertools.cycle(proxies)
 #Globals
 RPS =       0
 REQUESTS =  0
-TOTAL_CHECKS = 0
 WORKS =     0
 TAKEN =     0
 DEACTIVATE = False
@@ -404,27 +334,24 @@ g = Colors.GREY
 r = Colors.RED
 x = Colors.ENDC
 ASCII = f"""
-{g}
-                           ,----,                                       
-                         ,/   .`|           ,----..          ,-.----.   
-  .--.--.              ,`   .'  :          /   /   \         \    /  \  
- /  /    '.          ;    ;     /         /   .     :        |   :    \ 
-|  :  /`. /        .'___,/    ,'         .   /   ;.  \       |   |  .\ :
-;  |  |--`         |    :     |         .   ;   /  ` ;       .   :  |: |
-|  :  ;_           ;    |.';  ;         ;   |  ; \ ; |       |   |   \ :
- \  \    `.        `----'  |  |         |   :  | ; | '       |   : .   /
-  `----.   \           '   :  ;         .   |  ' ' ' :       ;   | |`-' 
-  __ \  \  |           |   |  '         '   ;  \; /  |       |   | ;    
- /  /`--'  /           '   :  |          \   \  ',  /        :   ' |    
-'--'.     /            ;   |.'            ;   :    /         :   : :    
-  `--'---'             '---'               \   \ .'          |   | :    
-                                            `---`            `---'.|    
-                                                               `---`    
+{g} 
 
-                    {r}@{x}  STOP Machine                 
+ ░▒▓███████▓▒░▒▓████████▓ ▒░▒▓██████▓▒░   ░▒▓███████▓▒░  
+░▒▓█▓▒░         ░▒▓█▓▒░  ░▒▓█▓▒░ ░▒▓█▓▒░  ▒▓█▓▒░ ░▒▓█▓▒░ 
+░▒▓█▓▒░         ░▒▓█▓▒░  ░▒▓█▓▒░ ░▒▓█▓▒░  ▒▓█▓▒░ ░▒▓█▓▒░ 
+ ░▒▓██████▓▒░   ░▒▓█▓▒░  ░▒▓█▓▒░ ░▒▓█▓▒░  ▒▓███████▓▒░  
+       ░▒▓█▓▒░  ░▒▓█▓▒░  ░▒▓█▓▒░ ░▒▓█▓▒░  ▒▓█▓▒░        
+       ░▒▓█▓▒░  ░▒▓█▓▒░  ░▒▓█▓▒░ ░▒▓█▓▒░  ▒▓█▓▒░        
+░▒▓███████▓▒░   ░▒▓█▓▒░   ░▒▓██████▓▒░░   ▓█▓▒░        
+                                                     
+                                                     
+
+
+                    {r}@{x}  STOP Machine            
                     {r}@{x}  (@__d1)     
-                    {r}@{x}  BEST Checker Man IN THE World       
-                    {r}@{x}  Version: {VERSION}                    """
+                    {r}@{x}  BEST Checker Man IN THE World        
+                    {r}@{x}  Version: {VERSION}              
+        """
 clear()
 print(ASCII)
 
@@ -490,36 +417,20 @@ else:
     Logger.log(f"Loaded config {config.get_all()}")
 
 
+
 if len(combos) == 0:
-    print("No usernames to check. Do you want to:")
-    print("1. Manually input usernames to check")
-    print("2. Generate usernames from scratch")
-    choice = input("Enter your choice (1/2): ")
-
-    if choice == "1":
-        print("Enter usernames to check, one per line:")
-        combos = []
-        while True:
-            username = input("> ")
-            if username.strip() == "":
-                break
-            combos.append(username.strip())
-        with open("data/names_to_check.txt", "w", encoding='utf-8') as f:
-            for combo in combos:
-                f.write(combo + "\n")
-            f.close()
-    elif choice == "2":
-        length = int(input("Enter the length of the usernames to generate: "))
-        CHARS = string.ascii_lowercase + string.digits + "_" + '.'
-        combos = itertools.product(CHARS, repeat=length)
-        with open("data/names_to_check.txt", "w", encoding='utf-8') as f:
-            for i in combos:
-                f.write("".join(i) + "\n")
-            f.close()
-    else:
-        print("Invalid choice. Exiting.")
-        sys.exit(1)
-
+    
+    combos = itertools.product(CHARS, repeat=int(input("Length of username: ")))
+    with open("data/names_to_check.txt", "w", encoding='utf-8') as f:
+        
+        for i in combos:
+            f.write("".join(i))
+            f.write("\n")
+        f.close()
+    
+    with open("data/names_to_check.txt", "r", encoding='utf-8') as f:
+        combos = f.read().splitlines()
+        f.close()
 Logger.log(f"Loaded {len(combos)} combos")
 longest_name = max([len(name) for name in combos]) 
 Logger.log(f"Longest name is {longest_name} characters long")
@@ -556,26 +467,16 @@ def worker():
         proxy_formated = str(proxy[:10]+'*'*10) if proxy else 'Proxyless'
         with lock:
             if available is True:
-                print(f"[{Colors.GREEN}+{Colors.ENDC}] Available  : {Colors.CYAN}{name}{Colors.ENDC}, {' '*(longest_name-len(name))}RPS : {Colors.CYAN}{RPS} / s{Colors.ENDC},  Available/Taken : {Colors.CYAN}{WORKS}/{TAKEN}{Colors.ENDC}, Total Requests : {Colors.CYAN}{REQUESTS}{Colors.ENDC}")
+                print(f"[{Colors.GREEN}+{Colors.ENDC}] Available  : {Colors.CYAN}{name}{Colors.ENDC}, {' '*(longest_name-len(name))}RPS : {Colors.CYAN}{RPS} / s{Colors.ENDC},  resp : {Colors.CYAN}{json}{Colors.ENDC}, proxy : {Colors.CYAN}{proxy_formated}{Colors.ENDC}")
                 
                 with open("results/hits.txt", "a", encoding='utf-8') as f:
                     f.write(name)
                     f.write("\n")
                     f.close()
-                
-                 # Remove the username from the file
-                with open("data/names_to_check.txt", "r+", encoding='utf-8') as f:
-                    lines = f.readlines()
-                    f.seek(0)
-                    for line in lines:
-                        if line.strip() != name:
-                            f.write(line)
-                    f.truncate()
-                    f.close()
 
             elif available == "RATELIMITED":
                 
-                print(f"[{Colors.YELLOW}?{Colors.ENDC}] TIMEOUT    : {Colors.CYAN}{json}{Colors.ENDC}, {' '*(20-int(len(str(json))))}RPS : {Colors.CYAN}{RPS} / s{Colors.ENDC},  Available/Taken : {Colors.CYAN}{WORKS}/{TAKEN}{Colors.ENDC}, Total Requests : {Colors.CYAN}{REQUESTS}{Colors.ENDC}")
+                print(f"[{Colors.YELLOW}?{Colors.ENDC}] TIMEOUT    : {Colors.CYAN}{json}{Colors.ENDC}, {' '*(20-int(len(str(json))))}RPS : {Colors.CYAN}{RPS} / s{Colors.ENDC},  resp : {Colors.CYAN}{json}{Colors.ENDC},{' '*(18-int(len(str(json)))-1)}proxy : {Colors.CYAN}{proxy_formated}{Colors.ENDC}")
             
             elif available == "ERROR":
                
@@ -583,21 +484,17 @@ def worker():
                     f.write(f"{name, json, status_code}\n")
             
             else:
-                 # Remove the username from the file
-                with open("data/names_to_check.txt", "r+", encoding='utf-8') as f:
-                    lines = f.readlines()
-                    f.seek(0)
-                    for line in lines:
-                        if line.strip() != name:
-                            f.write(line)
-                    f.truncate()
-                    f.close()
-                print(f"[{Colors.RED}-{Colors.ENDC}]   Taken    : {Colors.CYAN}{name}{Colors.ENDC}, {' '*(longest_name-len(name))}RPS : {Colors.CYAN}{RPS} / s{Colors.ENDC},  Available/Taken : {Colors.CYAN}{WORKS}/{TAKEN}{Colors.ENDC}, Total Requests : {Colors.CYAN}{REQUESTS}{Colors.ENDC}")
+                print(f"[{Colors.RED}-{Colors.ENDC}]   Taken    : {Colors.CYAN}{name}{Colors.ENDC}, {' '*(longest_name-len(name))}RPS : {Colors.CYAN}{RPS} / s{Colors.ENDC},  resp : {Colors.CYAN}{json}{Colors.ENDC},  proxy : {Colors.CYAN}{proxy_formated}{Colors.ENDC}")
 
         # Log all checked usernames, regardless of availability
         Logger.log(f"Checked username: {name}, Available: {available}, Response: {json}, Status Code: {status_code}")
 
         queue.task_done() 
+        
+        # Add the following line to write only taken usernames to checked.txt
+        if not available:  
+            with open("checked.txt", "a") as checked_file:
+                checked_file.write(name + "\n")
 
 
 def RPS_CALCULATOR():
@@ -699,7 +596,7 @@ def WEBHOOK_PROCESSOR():
                     msg
                 )
             
-            json = {"content": "\n".join(payload), 'username': 'StopBashaChecker', 'avatar_url': 'https://cdn.shopify.com/s/files/1/0027/5536/2879/files/Pioneer_RG_Leather_Black-Dial_Male_480x480.jpg?v=1673936366'}
+            json = {"content": "\n".join(payload), 'username': 'StopBasha', 'avatar_url': 'https://cdn.shopify.com/s/files/1/0027/5536/2879/files/Pioneer_RG_Leather_Black-Dial_Male_480x480.jpg?v=1673936366'}
             
             x = CLOUDCHECKER.session.post(
                 url=webhook,
@@ -717,7 +614,7 @@ def WEBHOOK_PROCESSOR():
             name = names_diff[0]
             current_time = time()
             hittime = f'<t:{round(current_time)}:T>'
-            json = {"content": message.replace("<name>", name).replace("<time>", str(hittime)).replace("<elapsed>", str(round(current_time - start_time))).replace("<RPS>", str(RPS)), 'username': 'StopBashaChecker', 'avatar_url': 'https://cdn.shopify.com/s/files/1/0027/5536/2879/files/Pioneer_RG_Leather_Black-Dial_Male_480x480.jpg?v=1673936366'}
+            json = {"content": message.replace("<name>", name).replace("<time>", str(hittime)).replace("<elapsed>", str(round(current_time - start_time))).replace("<RPS>", str(RPS)), 'username': 'StopBasha', 'avatar_url': 'https://cdn.shopify.com/s/files/1/0027/5536/2879/files/Pioneer_RG_Leather_Black-Dial_Male_480x480.jpg?v=1673936366'}
             x = CLOUDCHECKER.session.post(
                 url=webhook,
                 json=json
